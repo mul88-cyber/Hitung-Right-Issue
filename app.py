@@ -18,7 +18,7 @@ def local_css():
     <style>
     /* Styling untuk app container */
     [data-testid="stAppViewContainer"] {
-        background-color: #F0F2F6; /* Latar belakang abu-abu muda */
+        background-color: #0E1117; /* Latar belakang abu-abu muda */
     }
     
     /* Styling untuk main content */
@@ -31,7 +31,7 @@ def local_css():
 
     /* Card styling untuk hasil */
     .result-card {
-        background-color: #FFFFFF;
+        background-color: #FAFAFA;
         border-radius: 10px;
         padding: 25px;
         margin-bottom: 20px;
@@ -43,7 +43,7 @@ def local_css():
         color: #1a1a1a;
         margin-top: 0;
         margin-bottom: 15px;
-        border-bottom: 2px solid #F0F2F6;
+        border-bottom: 2px solid #0E1117;
         padding-bottom: 10px;
     }
 
@@ -73,13 +73,13 @@ def local_css():
 
     /* Styling sidebar */
     [data-testid="stSidebar"] {
-        background-color: #FFFFFF;
+        background-color: #FAFAFA;
         padding: 15px;
     }
     
     [data-testid="stSidebar"] h2 {
         color: #007AFF;
-        border-bottom: 2px solid #F0F2F6;
+        border-bottom: 2px solid #0E1117;
         padding-bottom: 10px;
     }
     
