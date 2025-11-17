@@ -38,7 +38,7 @@ def local_css():
     [data-testid="stSidebar"] {
         background-color: #1E1E1E; /* Latar belakang sidebar sedikit lebih terang */
         padding: 15px;
-        color: #FAFAFA; /* Atur default text color jadi putih */
+        color: #FAFAFA; /* [PERBAIKAN] Atur default text color jadi putih */
     }
     
     [data-testid="stSidebar"] h2 {
@@ -47,7 +47,7 @@ def local_css():
         padding-bottom: 10px;
     }
     
-    /* Target spesifik label input dan header form di sidebar */
+    /* [PERBAIKAN] Target spesifik label input dan header form di sidebar */
     [data-testid="stSidebar"] .stForm h3, 
     [data-testid="stSidebar"] .stForm label,
     [data-testid="stSidebar"] .stMarkdown {
@@ -57,14 +57,17 @@ def local_css():
     /* Card styling untuk hasil */
     .result-card {
         background-color: #262730; /* Streamlit card dark */
-        border-radius: 10px; padding: 25px;
-        margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         border: 1px solid #31333F; /* Border gelap */
     }
     
     .result-card h3 {
         color: #FAFAFA; /* Teks header card putih */
-        margin-top: 0; margin-bottom: 15px;
+        margin-top: 0;
+        margin-bottom: 15px;
         border-bottom: 2px solid #31333F;
         padding-bottom: 10px;
     }
@@ -76,29 +79,37 @@ def local_css():
     /* Styling untuk st.metric */
     [data-testid="stMetric"] {
         background-color: #1E1E1E; /* Background metric lebih gelap */
-        border-radius: 8px; padding: 15px;
+        border-radius: 8px;
+        padding: 15px;
         border: 1px solid #31333F;
     }
     
     [data-testid="stMetricLabel"] {
-        font-size: 16px; color: #AAAAAA; /* Label metric abu-abu muda */
+        font-size: 16px;
+        color: #AAAAAA; /* Label metric abu-abu muda */
     }
     
     [data-testid="stMetricValue"] {
-        font-size: 32px; font-weight: 600;
+        font-size: 32px;
+        font-weight: 600;
         color: #00AFFF; /* Nilai metric biru terang */
     }
     
     [data-testid="stMetricDelta"] {
-        font-size: 18px; font-weight: 600;
+        font-size: 18px;
+        font-weight: 600;
     }
 
     /* Tombol sidebar */
     .stButton>button {
-        background-color: #007AFF; color: white;
-        font-weight: bold; border-radius: 8px;
-        border: none; padding: 10px 20px;
-        width: 100%; transition: all 0.3s ease;
+        background-color: #007AFF;
+        color: white;
+        font-weight: bold;
+        border-radius: 8px;
+        border: none;
+        padding: 10px 20px;
+        width: 100%;
+        transition: all 0.3s ease;
     }
     
     .stButton>button:hover {
@@ -106,7 +117,10 @@ def local_css():
         box-shadow: 0 2px 5px rgba(0,122,255,0.3);
     }
     
-    .stAlert { color: #333; }
+    /* Teks info default */
+    .stAlert {
+         color: #333; /* Pastikan teks info box bisa dibaca jika light */
+    }
 
     /* [BARU] Styling untuk PNL di card */
     .pnl-positive { color: #28A745; font-weight: bold; }
@@ -224,11 +238,13 @@ if submit_button:
             "Ini adalah skenario yang sangat langka dan merugikan."
         )
     else:
+        # [PERBAIKAN] f-string yang error
         st.success(
             f"**ANALISIS: WAJIB DITEBUS! ✅** \n\n"
             f"Setiap 1 hak tebus (HMETD) Anda memiliki nilai intrinsik **Rp {Nilai_HMETD:,.2f}**. "
-            "Anda 'diuntungkan' karena bisa membeli saham di harga tebus (Rp {P_exercise:,.0f}) yang jauh lebih murah daripada harga teorinya (Rp {P_teori:,.2f})."
+            f"Anda 'diuntungkan' karena bisa membeli saham di harga tebus (Rp {P_exercise:,.0f}) yang jauh lebih murah daripada harga teorinya (Rp {P_teori:,.2f})."
         )
+        
         st.info(
             f"**STRATEGI:** Anda **wajib menebus** semua hak Anda. Jika Anda tidak menebus, "
             f"saham Anda akan terdilusi dan nilainya akan turun sebesar **{Dilution_pct:,.2f}%** "
@@ -237,7 +253,7 @@ if submit_button:
 
     st.markdown("---")
     
-    # --- [PERUBAHAN] Tampilan Simulasi (dengan PNL) ---
+    # --- Tampilan Simulasi (dengan PNL) ---
     if My_Shares > 0 and My_Avg_Price > 0: # Hanya tampilkan jika harga beli diisi
         st.markdown("### 💰 Simulasi PNL Posisi Anda")
         
@@ -258,7 +274,10 @@ if submit_button:
         # Kalkulasi Skenario 2 (MENEBUS)
         Total_Shares_After = My_Shares + My_Rights
         Cost_Basis_After = Cost_Basis_Before + Cost_to_Exercise
-        New_Avg_Price = Cost_Basis_After / Total_Shares_After # <- HARGA RATA-RATA BARU
+        
+        # Handle division by zero jika Total_Shares_After = 0 (meskipun My_Shares > 0)
+        New_Avg_Price = (Cost_Basis_After / Total_Shares_After) if Total_Shares_After > 0 else 0
+        
         Value_After_Exercise = Total_Shares_After * P_teori
         PNL_After_Exercise = Value_After_Exercise - Cost_Basis_After
         
