@@ -11,7 +11,7 @@ import math
 st.set_page_config(
     page_title="Kalkulator & Dashboard Rights Issue",
     page_icon="💸",
-    layout="wide" # Ubah ke wide agar dashboard muat
+    layout="wide" # Layout wide agar dashboard muat
 )
 
 # --- Inisialisasi Session State ---
@@ -193,14 +193,16 @@ def remove_issue(issue_id):
     ]
 
 # ==============================================================================
-#  sidebar INPUT DARI USER
+#  sidebar INPUT DARI USER (IMPROVED LAYOUT)
 # ==============================================================================
 st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Download_Indicator_Arrow.svg/2048px-Download_Indicator_Arrow.svg.png", width=50)
 st.sidebar.title("Kalkulator Rights Issue")
 st.sidebar.markdown("Masukkan data prospektus untuk menganalisis dan menyimpan ke dashboard.")
 
 with st.sidebar.form("ri_form"):
-    st.header("1. Data Saham")
+    
+    # --- GRUP 1: INFO EMITEN ---
+    st.header("1. Info Emiten")
     stock_code = st.text_input("Kode Saham", placeholder="Contoh: BBYB")
     P_market = st.number_input(
         "Harga Pasar Saat Ini (Rp)",
@@ -208,20 +210,27 @@ with st.sidebar.form("ri_form"):
         help="Harga saham di pasar sebelum tanggal Cum-Date."
     )
 
-    st.markdown("---")
-    st.markdown("**Rasio Rights Issue (Contoh: 10:3)**")
+    # --- GRUP 2: SKEMA RIGHTS ISSUE ---
+    st.header("2. Skema Rights Issue")
+    st.markdown("**Rasio (Lama : Baru)**")
     col_a, col_b = st.columns(2)
-    N_old = col_a.number_input("Saham Lama", min_value=1, value=10)
-    N_new = col_b.number_input("Hak Tebus (Baru)", min_value=1, value=3)
-    st.markdown("---")
-
-    st.header("2. Data Rights Issue")
+    N_old = col_a.number_input("Saham Lama", min_value=1, value=10, label_visibility="collapsed", help="Bagian 'Lama' dari rasio (Contoh: 10:3, masukkan 10)")
+    N_new = col_b.number_input("Hak Tebus (Baru)", min_value=1, value=3, label_visibility="collapsed", help="Bagian 'Baru' dari rasio (Contoh: 10:3, masukkan 3)")
+    
     P_exercise = st.number_input(
         "Harga Tebus / Exercise (Rp)",
         min_value=0, value=500, step=50,
         help="Harga untuk menebus 1 lembar saham baru."
     )
+    
+    st.markdown("**Tanggal Penting**")
+    col_d1, col_d2 = st.columns(2)
+    cum_date = col_d1.date_input("Cum Date", value=None)
+    ex_date = col_d2.date_input("Ex Date", value=None)
+    start_trading = col_d1.date_input("Start Trading", value=None)
+    last_trading = col_d2.date_input("Last Trading (Warning!)", value=None)
 
+    # --- GRUP 3: POSISI ANDA ---
     st.header("3. (Opsional) Posisi Anda")
     My_Shares = st.number_input(
         "Jumlah Saham Anda Saat Ini",
@@ -234,17 +243,6 @@ with st.sidebar.form("ri_form"):
         help="Harga modal (average price) Anda saat ini. Default = Harga Pasar."
     )
 
-    # [BARU] Input Tanggal
-    st.header("4. Tanggal Penting (untuk Dashboard)")
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        cum_date = st.date_input("Cum Date", value=None)
-        start_trading = st.date_input("Start Trading", value=None)
-    with col_d2:
-        ex_date = st.date_input("Ex Date", value=None)
-        last_trading = st.date_input("Last Trading (Warning!)", value=None)
-
-
     submit_button = st.form_submit_button("Hitung & Tambah ke Dashboard 🧮")
 
 # ==============================================================================
@@ -255,142 +253,147 @@ st.title("💸 Analisis Kelayakan Rights Issue")
 if not submit_button:
     st.info("Masukkan parameter *rights issue* di *sidebar* kiri dan klik 'Hitung & Tambah ke Dashboard'.")
 
+# --- Logika setelah form disubmit ---
 if submit_button:
     # Lakukan kalkulasi
     P_teori, Nilai_HMETD, Dilution_pct = calculate_theoretical_price(P_market, N_old, P_exercise, N_new)
 
-    st.markdown(f"Menganalisis skenario **{stock_code.upper()}** (**{N_old} : {N_new}**) dengan harga tebus **Rp {P_exercise:,.0f}** dan harga pasar **Rp {P_market:,.0f}**.")
-    st.markdown("---")
-
-    # --- Tampilan Metrik Utama ---
-    st.markdown("### 📊 Hasil Kalkulasi Utama")
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Harga Teori (Ex-Date)", f"Rp {P_teori:,.2f}", f"{Dilution_pct:,.2f}% vs Pasar", delta_color="inverse")
-    col2.metric("Nilai 1 Hak Tebus (HMETD)", f"Rp {Nilai_HMETD:,.2f}", "Wajib Positif")
-    col3.metric("Potensi Dilusi (jika tidak tebus)", f"{Dilution_pct:,.2f}%")
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # --- Tampilan Analisis Fund Manager ---
-    st.markdown("### 🧠 Analisis Fund Manager")
-
-    if Nilai_HMETD < 0:
-        st.error(
-            f"**ANALISIS: MERUGIKAN! ❌** \n\n"
-            f"Harga Tebus (Rp {P_exercise:,.0f}) **lebih mahal** daripada Harga Teori (Rp {P_teori:,.2f}). "
-            "Ini adalah skenario yang sangat langka dan merugikan."
-        )
-    else:
-        # [PERBAIKAN] f-string yang error
-        st.success(
-            f"**ANALISIS: WAJIB DITEBUS! ✅** \n\n"
-            f"Setiap 1 hak tebus (HMETD) Anda memiliki nilai intrinsik **Rp {Nilai_HMETD:,.2f}**. "
-            f"Anda 'diuntungkan' karena bisa membeli saham di harga tebus (Rp {P_exercise:,.0f}) yang jauh lebih murah daripada harga teorinya (Rp {P_teori:,.2f})."
-        )
-        
-    st.info(
-        f"**STRATEGI:** Anda **wajib menebus** semua hak Anda. Jika Anda tidak menebus, "
-        f"saham Anda akan terdilusi dan nilainya akan turun sebesar **{Dilution_pct:,.2f}%** "
-        f"secara cuma-cuma (rugi kertas) saat *ex-date*."
-    )
-
-    st.markdown("---")
-
-    # --- [PERUBAHAN] Tampilan Simulasi (dengan PNL) ---
-    if My_Shares > 0 and My_Avg_Price > 0: # Hanya tampilkan jika harga beli diisi
-        st.markdown("### 💰 Simulasi PNL Posisi Anda")
-
-        # --- Hitung kalkulasi PNL ---
-        My_Rights = (My_Shares / N_old) * N_new
-        Cost_to_Exercise = My_Rights * P_exercise
-
-        # Kalkulasi SEBELUM RI
-        Cost_Basis_Before = My_Shares * My_Avg_Price
-        Value_Before = My_Shares * P_market
-        PNL_Before = Value_Before - Cost_Basis_Before
-
-        # Kalkulasi Skenario 1 (TIDAK Menebus)
-        Value_After_No_Exercise = My_Shares * P_teori
-        PNL_After_No_Exercise = Value_After_No_Exercise - Cost_Basis_Before
-        Loss_No_Exercise = Value_Before - Value_After_No_Exercise # Ini kerugian dilusi
-
-        # Kalkulasi Skenario 2 (MENEBUS)
-        Total_Shares_After = My_Shares + My_Rights
-        Cost_Basis_After = Cost_Basis_Before + Cost_to_Exercise
-        
-        # Handle division by zero
-        New_Avg_Price = (Cost_Basis_After / Total_Shares_After) if Total_Shares_After > 0 else 0
-        
-        Value_After_Exercise = Total_Shares_After * P_teori
-        PNL_After_Exercise = Value_After_Exercise - Cost_Basis_After
-
-        st.markdown(f"Anda memiliki **{My_Shares:,.0f}** lembar saham dengan harga beli rata-rata **Rp {My_Avg_Price:,.2f}**. Anda mendapat **{My_Rights:,.0f}** hak tebus.")
-
-        sim_col1, sim_col2 = st.columns(2)
-
-        with sim_col1:
-            st.markdown(
-                f"""
-                <div class="result-card" style="border-left: 5px solid #D93025;">
-                <h3>Skenario 1: TIDAK Menebus</h3>
-                <p>Anda membiarkan hak Anda hangus.</p>
-                <ul>
-                    <li>Modal Awal: <strong>Rp {Cost_Basis_Before:,.0f}</strong></li>
-                    <li>PNL Awal (vs Pasar): {format_pnl(PNL_Before)}</li>
-                    <hr style="border-top: 1px dashed #31333F; margin: 10px 0;">
-                    <li>Nilai Aset (Ex-Date): <strong>Rp {Value_After_No_Exercise:,.0f}</strong></li>
-                    <li>PNL Baru (vs Teori): {format_pnl(PNL_After_No_Exercise)}</li>
-                </ul>
-                <h4 style="color: #FF4B4B;">Kerugian Dilusi: Rp {Loss_No_Exercise:,.0f}</h4>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with sim_col2:
-            st.markdown(
-                f"""
-                <div class="result-card" style="border-left: 5px solid #1E8E3E;">
-                <h3>Skenario 2: MENEBUS Semua</h3>
-                <p>Anda menebus semua hak (butuh dana Rp {Cost_to_Exercise:,.0f}).</p>
-                <ul>
-                    <li>Total Modal Baru: <strong>Rp {Cost_Basis_After:,.0f}</strong></li>
-                    <li>Total Saham Baru: <strong>{Total_Shares_After:,.0f} lembar</strong></li>
-                    <hr style="border-top: 1px dashed #31333F; margin: 10px 0;">
-                    <li><span class="new-avg-price">Avg. Price BARU: <strong>Rp {New_Avg_Price:,.2f}</strong></span></li>
-                    <li>Nilai Aset (Ex-Date): <strong>Rp {Value_After_Exercise:,.0f}</strong></li>
-                    <li>PNL Baru (vs Teori): {format_pnl(PNL_After_Exercise)}</li>
-                </ul>
-                <h4 style="color: #28A745;">PNL & Aset Anda Terlindungi</h4>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-    elif My_Shares > 0 and My_Avg_Price == 0:
-        st.warning("Silakan masukkan 'Harga Beli Rata-Rata Anda' di sidebar untuk melihat simulasi PNL.", icon="⚠️")
-
-    # [BARU] Logika untuk menambah ke dashboard
     if not stock_code:
-        st.error("Kode Saham wajib diisi untuk menambah ke dashboard pantauan!")
+         st.error("Kode Saham wajib diisi!")
     else:
-        new_issue = {
-            "id": f"{stock_code}-{datetime.datetime.now().timestamp()}",
-            "stock_code": stock_code.upper(),
-            "harga_tebus": P_exercise,
-            "harga_teori": P_teori, # Ambil dari kalkulasi di atas
-            "cum_date": cum_date,
-            "ex_date": ex_date,
-            "start_trading": start_trading,
-            "last_trading": last_trading,
-        }
-        # Tambahkan ke session state
-        st.session_state['issues'].append(new_issue)
-        st.success(f"Saham {stock_code.upper()} berhasil ditambahkan ke dashboard pantauan!")
+        st.markdown(f"Menganalisis skenario **{stock_code.upper()}** (**{N_old} : {N_new}**) dengan harga tebus **Rp {P_exercise:,.0f}** dan harga pasar **Rp {P_market:,.0f}**.")
+        st.markdown("---")
+
+        # --- Tampilan Metrik Utama ---
+        st.markdown("### 📊 Hasil Kalkulasi Utama")
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Harga Teori (Ex-Date)", f"Rp {P_teori:,.2f}", f"{Dilution_pct:,.2f}% vs Pasar", delta_color="inverse")
+        col2.metric("Nilai 1 Hak Tebus (HMETD)", f"Rp {Nilai_HMETD:,.2f}", "Wajib Positif")
+        col3.metric("Potensi Dilusi (jika tidak tebus)", f"{Dilution_pct:,.2f}%")
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # --- Tampilan Analisis Fund Manager ---
+        st.markdown("### 🧠 Analisis Fund Manager")
+
+        if Nilai_HMETD < 0:
+            st.error(
+                f"**ANALISIS: MERUGIKAN! ❌** \n\n"
+                f"Harga Tebus (Rp {P_exercise:,.0f}) **lebih mahal** daripada Harga Teori (Rp {P_teori:,.2f}). "
+                "Ini adalah skenario yang sangat langka dan merugikan."
+            )
+        else:
+            st.success(
+                f"**ANALISIS: WAJIB DITEBUS! ✅** \n\n"
+                f"Setiap 1 hak tebus (HMETD) Anda memiliki nilai intrinsik **Rp {Nilai_HMETD:,.2f}**. "
+                f"Anda 'diuntungkan' karena bisa membeli saham di harga tebus (Rp {P_exercise:,.0f}) yang jauh lebih murah daripada harga teorinya (Rp {P_teori:,.2f})."
+            )
+            
+        st.info(
+            f"**STRATEGI:** Anda **wajib menebus** semua hak Anda. Jika Anda tidak menebus, "
+            f"saham Anda akan terdilusi dan nilainya akan turun sebesar **{Dilution_pct:,.2f}%** "
+            f"secara cuma-cuma (rugi kertas) saat *ex-date*."
+        )
+
+        st.markdown("---")
+
+        # --- Tampilan Simulasi (dengan PNL) ---
+        if My_Shares > 0 and My_Avg_Price > 0: # Hanya tampilkan jika harga beli diisi
+            st.markdown("### 💰 Simulasi PNL Posisi Anda")
+
+            # --- Hitung kalkulasi PNL ---
+            My_Rights = (My_Shares / N_old) * N_new
+            Cost_to_Exercise = My_Rights * P_exercise
+
+            # Kalkulasi SEBELUM RI
+            Cost_Basis_Before = My_Shares * My_Avg_Price
+            Value_Before = My_Shares * P_market
+            PNL_Before = Value_Before - Cost_Basis_Before
+
+            # Kalkulasi Skenario 1 (TIDAK Menebus)
+            Value_After_No_Exercise = My_Shares * P_teori
+            PNL_After_No_Exercise = Value_After_No_Exercise - Cost_Basis_Before
+            Loss_No_Exercise = Value_Before - Value_After_No_Exercise # Ini kerugian dilusi
+
+            # Kalkulasi Skenario 2 (MENEBUS)
+            Total_Shares_After = My_Shares + My_Rights
+            Cost_Basis_After = Cost_Basis_Before + Cost_to_Exercise
+            
+            # Handle division by zero
+            New_Avg_Price = (Cost_Basis_After / Total_Shares_After) if Total_Shares_After > 0 else 0
+            
+            Value_After_Exercise = Total_Shares_After * P_teori
+            PNL_After_Exercise = Value_After_Exercise - Cost_Basis_After
+
+            st.markdown(f"Anda memiliki **{My_Shares:,.0f}** lembar saham dengan harga beli rata-rata **Rp {My_Avg_Price:,.2f}**. Anda mendapat **{My_Rights:,.0f}** hak tebus.")
+
+            sim_col1, sim_col2 = st.columns(2)
+
+            with sim_col1:
+                st.markdown(
+                    f"""
+                    <div class="result-card" style="border-left: 5px solid #D93025;">
+                    <h3>Skenario 1: TIDAK Menebus</h3>
+                    <p>Anda membiarkan hak Anda hangus.</p>
+                    <ul>
+                        <li>Modal Awal: <strong>Rp {Cost_Basis_Before:,.0f}</strong></li>
+                        <li>PNL Awal (vs Pasar): {format_pnl(PNL_Before)}</li>
+                        <hr style="border-top: 1px dashed #31333F; margin: 10px 0;">
+                        <li>Nilai Aset (Ex-Date): <strong>Rp {Value_After_No_Exercise:,.0f}</strong></li>
+                        <li>PNL Baru (vs Teori): {format_pnl(PNL_After_No_Exercise)}</li>
+                    </ul>
+                    <h4 style="color: #FF4B4B;">Kerugian Dilusi: Rp {Loss_No_Exercise:,.0f}</h4>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            with sim_col2:
+                st.markdown(
+                    f"""
+                    <div class="result-card" style="border-left: 5px solid #1E8E3E;">
+                    <h3>Skenario 2: MENEBUS Semua</h3>
+                    <p>Anda menebus semua hak (butuh dana Rp {Cost_to_Exercise:,.0f}).</p>
+                    <ul>
+                        <li>Total Modal Baru: <strong>Rp {Cost_Basis_After:,.0f}</strong></li>
+                        <li>Total Saham Baru: <strong>{Total_Shares_After:,.0f} lembar</strong></li>
+                        <hr style="border-top: 1px dashed #31333F; margin: 10px 0;">
+                        <li><span class="new-avg-price">Avg. Price BARU: <strong>Rp {New_Avg_Price:,.2f}</strong></span></li>
+                        <li>Nilai Aset (Ex-Date): <strong>Rp {Value_After_Exercise:,.0f}</strong></li>
+                        <li>PNL Baru (vs Teori): {format_pnl(PNL_After_Exercise)}</li>
+                    </ul>
+                    <h4 style="color: #28A745;">PNL & Aset Anda Terlindungi</h4>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        elif My_Shares > 0 and My_Avg_Price == 0:
+            st.warning("Silakan masukkan 'Harga Beli Rata-Rata Anda' di sidebar untuk melihat simulasi PNL.", icon="⚠️")
+
+        # --- Logika untuk menambah ke dashboard ---
+        # Cek duplikat berdasarkan stock_code (opsional, tapi bagus)
+        existing_codes = [issue['stock_code'] for issue in st.session_state['issues']]
+        if stock_code.upper() not in existing_codes:
+            new_issue = {
+                "id": f"{stock_code}-{datetime.datetime.now().timestamp()}",
+                "stock_code": stock_code.upper(),
+                "harga_tebus": P_exercise,
+                "harga_teori": P_teori, # Ambil dari kalkulasi di atas
+                "cum_date": cum_date,
+                "ex_date": ex_date,
+                "start_trading": start_trading,
+                "last_trading": last_trading,
+            }
+            # Tambahkan ke session state
+            st.session_state['issues'].append(new_issue)
+            st.success(f"Saham {stock_code.upper()} berhasil ditambahkan ke dashboard pantauan!")
+        else:
+            st.warning(f"Saham {stock_code.upper()} sudah ada di dashboard. Hapus dulu jika ingin update.")
         
 
 # ==============================================================================
-# [BARU] TAMPILAN DASHBOARD PANTAUAN
+# TAMPILAN DASHBOARD PANTAUAN
 # ==============================================================================
 st.markdown("---")
 st.header("📅 Dashboard Pantauan Saham", divider="rainbow")
@@ -399,12 +402,13 @@ if not st.session_state['issues']:
     st.info("Belum ada saham yang dipantau. Silakan tambahkan melalui form di sidebar.")
 else:
     # Buat grid 3 kolom untuk kartu-kartu
-    cols = st.columns(3)
+    # [PERBAIKAN] Gunakan 3 kolom agar layout sesuai screenshot
+    cols = st.columns(3) 
     
     # Urutkan berdasarkan 'last_trading' (yang paling mepet paling atas)
     sorted_issues = sorted(
         st.session_state['issues'], 
-        key=lambda x: x['last_trading'] or datetime.date.max # Handle jika tanggal None
+        key=lambda x: (x['last_trading'] or datetime.date.max, x['stock_code']) # Handle jika tanggal None
     )
 
     for idx, issue in enumerate(sorted_issues):
@@ -413,7 +417,6 @@ else:
         # Taruh kartu di kolom yang sesuai (idx % 3 akan berputar 0, 1, 2)
         with cols[idx % 3]:
             
-            # st.container(border=True) membuat 'kartu'
             with st.container(border=True):
                 
                 # Header Kartu
@@ -438,7 +441,7 @@ else:
                 else:
                     st.info(f"**{warning_text}**") # Untuk status 'info'
 
-                # Detail Harga
+                # Detail Harga (Layout 2 kolom seperti di screenshot)
                 col_p1, col_p2 = st.columns(2)
                 col_p1.metric("Harga Tebus", f"Rp {issue['harga_tebus']:,.2f}")
                 col_p2.metric("Harga Teori", f"Rp {issue['harga_teori']:,.2f}")
